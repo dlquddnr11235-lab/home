@@ -8,7 +8,7 @@
 </style>
 </head>
 <body>
-<header><div class="wrap"><div class="top"><div class="brand">⌂ 청약 길잡이</div><a href="https://www.applyhome.co.kr/" target="_blank" rel="noopener noreferrer">청약홈 바로가기 ↗</a></div><div class="hero"><p class="eyebrow">LIVE APPLICATION NOTICE</p><h1>지금 확인할 청약,<br>내 조건에 맞춰 살펴보세요.</h1><p>청약홈 공고의 접수 일정을 불러와 관심 지역과 기본 조건에 따라 우선 확인할 공고를 보여줍니다.</p></div></div></header>
+<header><div class="wrap"><div class="top"><div class="brand">⌂ 청약 길잡이</div><a href="https://www.applyhome.co.kr/" target="_blank" rel="noopener noreferrer">청약홈 바로가기 ↗</a></div><div class="hero"><p class="eyebrow">APPLICATION NOTICE</p><h1>지금 확인할 청약,<br>내 조건에 맞춰 살펴보세요.</h1><p>청약홈 공고의 접수 일정을 불러와 관심 지역과 기본 조건에 따라 우선 확인할 공고를 보여줍니다.</p></div></div></header>
 <main class="wrap"><div class="layout">
 <form class="panel profile" id="profileForm"><h2>간단한 조건 입력</h2><p class="hint">이름·연락처·주민등록번호는 입력하지 않습니다.</p>
 <label for="region">관심 지역</label><select id="region" required><option value="all">전국</option><option>서울</option><option>경기</option><option>인천</option><option>부산</option><option>대구</option><option>광주</option><option>대전</option><option>울산</option><option>세종</option><option>강원</option><option>충북</option><option>충남</option><option>전북</option><option>전남</option><option>경북</option><option>경남</option><option>제주</option></select>
@@ -17,19 +17,17 @@
 <label for="account">청약통장 가입 여부</label><select id="account"><option value="unknown">모름 / 확인 필요</option><option value="yes">가입</option><option value="no">미가입</option></select>
 <label for="married">혼인 상태</label><select id="married"><option value="no">미혼</option><option value="yes">기혼 / 예비 신혼</option></select>
 <label for="children">자녀 여부</label><select id="children"><option value="no">없음</option><option value="yes">있음</option></select>
-<label for="apiKey">공공데이터포털 API 인증키</label><input id="apiKey" type="password" autocomplete="off" spellcheck="false" required placeholder="공공데이터포털 인증키"><p class="key-help">로컬에서는 키가 자동 입력됩니다. GitHub에서 열 때는 본인의 <a href="https://www.data.go.kr/data/15098547/openapi.do" target="_blank" rel="noopener noreferrer">공공데이터포털 인증키</a>를 입력하세요. 키와 입력 조건은 브라우저에 저장하지 않습니다.</p>
-<button class="primary" id="searchButton" type="submit">현재 공고 찾기</button></form>
+<p class="key-help">공고 데이터가 자동으로 표시됩니다. 개인 조건은 브라우저에 저장하지 않습니다.</p>
+<button class="primary" id="searchButton" type="submit">조건에 맞춰 다시 보기</button></form>
 <section class="panel results" aria-labelledby="resultsTitle"><div class="results-head"><h2 id="resultsTitle">청약 공고</h2><p id="summary">조건을 입력하고 공고를 조회해 주세요.</p></div><div class="status" id="status" role="status">APT와 무순위·잔여세대 공고에서 접수 중이거나 접수 예정인 공고를 찾습니다. 추천은 자격 확정 결과가 아닙니다.</div><div class="filters" aria-label="접수 상태 필터"><button type="button" data-filter="all" aria-pressed="true">전체</button><button type="button" data-filter="open" aria-pressed="false">접수 중</button><button type="button" data-filter="soon" aria-pressed="false">접수 예정</button></div><div class="list" id="noticeList"></div></section>
-</div><p class="footnote">자료: <a href="https://www.data.go.kr/data/15098547/openapi.do" target="_blank" rel="noopener noreferrer">한국부동산원 청약홈 분양정보 조회 서비스</a> · 접수 일정은 바뀔 수 있습니다. 신청 전 모집공고문에서 거주 요건, 세대·주택 소유, 통장 가입 기간·예치금, 소득·자산, 재당첨 제한과 접수 시간을 확인하세요. 실제 신청은 청약홈에서 진행합니다.</p></main>
-<script src="local-config.js"></script>
+</div><p class="footnote">자료: <a href="https://www.data.go.kr/data/15098547/openapi.do" target="_blank" rel="noopener noreferrer">한국부동산원 청약홈 분양정보 조회 서비스</a> · 공고 데이터는 약 15분 간격으로 갱신되며 지연될 수 있습니다. 접수 일정은 바뀔 수 있습니다. 신청 전 모집공고문에서 거주 요건, 세대·주택 소유, 통장 가입 기간·예치금, 소득·자산, 재당첨 제한과 접수 시간을 확인하세요. 실제 신청은 청약홈에서 진행합니다.</p></main>
+<script src="data/notices.js"></script>
 <script>
 'use strict';
-const API_BASE='https://api.odcloud.kr/api/ApplyhomeInfoDetailSvc/v1/';
-const ENDPOINTS=[{path:'getAPTLttotPblancDetail',type:'APT'},{path:'getRemndrLttotPblancDetail',type:'무순위·잔여세대'}];
-const form=document.getElementById('profileForm'),list=document.getElementById('noticeList'),statusBox=document.getElementById('status'),summary=document.getElementById('summary'),searchButton=document.getElementById('searchButton'),filterButtons=[...document.querySelectorAll('[data-filter]')];
-document.getElementById('apiKey').value=window.CHEONGYAK_API_KEY||'';
+const SNAPSHOT=window.CHEONGYAK_NOTICE_DATA||null;
+const form=document.getElementById('profileForm'),list=document.getElementById('noticeList'),statusBox=document.getElementById('status'),summary=document.getElementById('summary'),filterButtons=[...document.querySelectorAll('[data-filter]')];
 const value=id=>document.getElementById(id).value;
-let results=[],activeFilter='all',lastProfile=null,refreshing=false;
+let results=[],activeFilter='all',lastProfile=null;
 function dateValue(raw){const digits=String(raw??'').replace(/\D/g,'');if(digits.length<8)return '';const date=digits.slice(0,8),parsed=new Date(`${date.slice(0,4)}-${date.slice(4,6)}-${date.slice(6,8)}T00:00:00Z`);return Number.isNaN(parsed.getTime())||parsed.toISOString().slice(0,10).replace(/-/g,'')!==date?'':date}
 function showDate(raw){const date=dateValue(raw);return date?`${date.slice(0,4)}.${date.slice(4,6)}.${date.slice(6,8)}`:'공고문 확인'}
 function koreaDate(offsetDays=0){const parts=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(Date.now()+offsetDays*86400000)),get=type=>parts.find(part=>part.type===type).value;return get('year')+get('month')+get('day')}
@@ -48,10 +46,32 @@ function setStatus(message,error=false){statusBox.textContent=message;statusBox.
 function assessment(record,profile){const reasons=[],checks=[];let score=record.state==='open'?3:1;if(profile.region!=='all'){reasons.push('관심 지역');score+=2}if(profile.house==='yes'){reasons.push('무주택 조건으로 검토');score+=2}if(profile.house==='no')checks.push('주택 보유 시 신청 가능 유형 확인');if(profile.house==='unknown')checks.push('세대 전체 무주택 여부 확인');if(profile.account==='yes'){reasons.push('청약통장 가입');score++}if(profile.account==='no')checks.push('통장 없이 신청 가능한 유형인지 확인');if(profile.account==='unknown')checks.push('청약통장 요건 확인');const specialStart=dateValue(record.item.SPSPLY_RCEPT_BGNDE),specialEnd=dateValue(record.item.SPSPLY_RCEPT_ENDDE),specialPending=specialStart&&specialEnd>=koreaDate();if(profile.married==='yes'&&record.type==='APT'&&specialPending){reasons.push('신혼부부 특별공급 검토');score++}if(profile.children==='yes'&&record.type==='APT'&&specialPending){reasons.push('자녀 관련 특별공급 검토');score++}if(profile.age==='no')checks.push('연령·세대주 예외 요건 확인');if(record.type==='무순위·잔여세대')checks.push('무순위 공고별 거주·무주택·통장 요건 확인');if(!reasons.length)reasons.push('접수 일정이 남아 있는 공고');return{score,text:reasons.join(' · ')+(checks.length?' | 추가 확인: '+checks.join(' · '):' | 자격은 공고문 확인')}}
 function safeNoticeUrl(raw){try{const url=new URL(String(raw||''));if(url.protocol==='https:'&&(url.hostname==='applyhome.co.kr'||url.hostname.endsWith('.applyhome.co.kr')))return url.href}catch(_){}return'https://www.applyhome.co.kr/'}
 function render(){list.replaceChildren();const shown=results.filter(record=>activeFilter==='all'||record.state===activeFilter);if(!shown.length){const empty=document.createElement('p');empty.className='empty';empty.textContent=results.length?'선택한 접수 상태의 공고가 없습니다.':'조회 범위에 현재 접수 중이거나 예정된 공고가 없습니다.';list.appendChild(empty);return}for(const record of shown){const item=record.item,card=document.createElement('article');card.className='notice';const top=document.createElement('div');top.className='notice-top';const title=document.createElement('h3');title.textContent=item.HOUSE_NM||'이름 없는 공고';const tag=document.createElement('span');tag.className='tag'+(record.state==='soon'?' soon':'');tag.textContent=record.state==='soon'?'접수 예정':'접수 중';top.append(title,tag);const meta=document.createElement('p');meta.className='meta';meta.textContent=`${record.type} · ${item.SUBSCRPT_AREA_CODE_NM||'지역 미표기'} · 접수 ${showDate(record.period.start)} ~ ${showDate(record.period.end)}`;const address=document.createElement('p');address.className='meta';address.textContent=item.HSSPLY_ADRES||'상세 위치는 공고문 확인';const reason=document.createElement('p');reason.className='reason';reason.textContent='우선 확인 이유: '+assessment(record,lastProfile).text;const link=document.createElement('a');link.href=safeNoticeUrl(item.PBLANC_URL);link.target='_blank';link.rel='noopener noreferrer';link.textContent='공고 확인 및 청약홈에서 신청 ↗';card.append(top,meta,address,reason,link);list.appendChild(card)}}
-async function loadPage(endpoint,key,page,fromDate){const url=new URL(API_BASE+endpoint.path);url.searchParams.set('serviceKey',key);url.searchParams.set('page',String(page));url.searchParams.set('perPage','100');url.searchParams.set('returnType','JSON');url.searchParams.set('cond[RCRIT_PBLANC_DE::GTE]',`${fromDate.slice(0,4)}-${fromDate.slice(4,6)}-${fromDate.slice(6,8)}`);const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);try{const response=await fetch(url,{signal:controller.signal,cache:'no-store'});if(!response.ok)throw new Error(`API 응답 오류 (${response.status})`);const body=await response.json();if(!Array.isArray(body.data))throw new Error(body.message||'API 응답 형식을 확인할 수 없습니다.');return body}finally{clearTimeout(timer)}}
-async function loadEndpoint(endpoint,key,fromDate){const first=await loadPage(endpoint,key,1,fromDate),items=[...first.data];let last=first;for(let page=2;page<=10&&last.data.length===100;page++){last=await loadPage(endpoint,key,page,fromDate);items.push(...last.data)}return{items:items.map(item=>({item,type:endpoint.type})),truncated:items.length>=1000&&last.data.length===100}}
-async function search(){if(refreshing)return;const key=value('apiKey').trim();if(!key)return;lastProfile={region:value('region'),age:value('age'),house:value('house'),account:value('account'),married:value('married'),children:value('children')};refreshing=true;searchButton.disabled=true;results=[];list.replaceChildren();summary.textContent='최신 공고를 불러오는 중입니다.';setStatus('한국부동산원 청약홈 분양정보를 조회하고 있습니다.');const today=koreaDate();try{const settled=await Promise.allSettled(ENDPOINTS.map(endpoint=>loadEndpoint(endpoint,key,koreaDate(-90)))),batches=settled.filter(entry=>entry.status==='fulfilled').map(entry=>entry.value),unique=new Map();if(!batches.length)throw settled[0].reason;for(const batch of batches)for(const record of batch.items){const item=record.item,identity=[record.type,item.HOUSE_MANAGE_NO,item.PBLANC_NO,item.HOUSE_NM].join(':');unique.set(identity,record)}results=[...unique.values()].map(record=>{const period=periodFor(record.item);return{...record,period,state:period.windows.some(window=>window.start<=today&&window.end>=today)?'open':'soon'}}).filter(record=>{const area=String(record.item.SUBSCRPT_AREA_CODE_NM||record.item.HSSPLY_ADRES||'');return record.period.start&&record.period.end>=today&&(lastProfile.region==='all'||area.includes(lastProfile.region))}).sort((a,b)=>assessment(b,lastProfile).score-assessment(a,lastProfile).score||a.period.start.localeCompare(b.period.start));render();const now=new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',dateStyle:'medium',timeStyle:'short'}).format(new Date());summary.textContent=`${now} 조회 · ${results.length}건 · 접수 중 ${results.filter(r=>r.state==='open').length}건`;setStatus('실시간 API 조회 결과입니다.'+(batches.length<ENDPOINTS.length?' 일부 유형은 조회하지 못했습니다.':'')+(batches.some(batch=>batch.truncated)?' 조회량 제한으로 일부 공고가 빠졌을 수 있습니다.':'')+' 추천 이유는 참고용이며 실제 신청 자격은 공고문에서 확인하세요.')}catch(error){results=[];list.replaceChildren();summary.textContent='공고를 불러오지 못했습니다.';setStatus(error.name==='AbortError'?'API 응답 시간이 초과되었습니다. 잠시 후 다시 시도하세요.':error instanceof TypeError?'브라우저에서 API에 연결하지 못했습니다. 네트워크 또는 API의 브라우저 접근(CORS)을 확인하세요.':error.message,true)}finally{refreshing=false;searchButton.disabled=false}}
-form.addEventListener('submit',event=>{event.preventDefault();search()});for(const button of filterButtons)button.addEventListener('click',()=>{activeFilter=button.dataset.filter;for(const other of filterButtons)other.setAttribute('aria-pressed',String(other===button));if(lastProfile)render()});
+function search(){
+  lastProfile={region:value('region'),age:value('age'),house:value('house'),account:value('account'),married:value('married'),children:value('children')};
+  if(!SNAPSHOT||!Array.isArray(SNAPSHOT.items)){
+    results=[];list.replaceChildren();summary.textContent='공고 데이터를 불러오지 못했습니다.';
+    setStatus('자동 수집 데이터가 아직 준비되지 않았습니다. 잠시 후 다시 열어 주세요.',true);
+    return;
+  }
+  const today=koreaDate(),unique=new Map();
+  for(const record of SNAPSHOT.items){
+    if(!record||!record.item)continue;
+    const item=record.item,identity=[record.type,item.HOUSE_MANAGE_NO,item.PBLANC_NO,item.HOUSE_NM].join(':');
+    unique.set(identity,record);
+  }
+  results=[...unique.values()].map(record=>{
+    const period=periodFor(record.item);
+    return{...record,period,state:period.windows.some(window=>window.start<=today&&window.end>=today)?'open':'soon'};
+  }).filter(record=>{
+    const area=String(record.item.SUBSCRPT_AREA_CODE_NM||record.item.HSSPLY_ADRES||'');
+    return record.period.start&&record.period.end>=today&&(lastProfile.region==='all'||area.includes(lastProfile.region));
+  }).sort((a,b)=>assessment(b,lastProfile).score-assessment(a,lastProfile).score||a.period.start.localeCompare(b.period.start));
+  render();
+  const collected=new Date(SNAPSHOT.updatedAt),stamp=Number.isNaN(collected.getTime())?'시간 미확인':new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',dateStyle:'medium',timeStyle:'short'}).format(collected);
+  summary.textContent=`수집 ${stamp} · ${results.length}건 · 접수 중 ${results.filter(r=>r.state==='open').length}건`;
+  const stale=Number.isNaN(collected.getTime())||Date.now()-collected.getTime()>45*60000;
+  setStatus((stale?'최근 데이터 갱신이 지연되고 있습니다. ':'약 15분 간격으로 수집한 공고입니다. ')+'추천 이유는 참고용이며 실제 신청 자격과 접수 시간은 공고문에서 확인하세요.',stale);
+}form.addEventListener('submit',event=>{event.preventDefault();search()});for(const button of filterButtons)button.addEventListener('click',()=>{activeFilter=button.dataset.filter;for(const other of filterButtons)other.setAttribute('aria-pressed',String(other===button));if(lastProfile)render()});search();
 </script>
 </body>
 </html>

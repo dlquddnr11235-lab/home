@@ -1,0 +1,29 @@
+name: Refresh subscription notices
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch public notices
+        shell: pwsh
+        env:
+          CHEONGYAK_API_KEY: ${{ secrets.CHEONGYAK_API_KEY }}
+        run: ./scripts/refresh-notices.ps1
+      - name: Commit refreshed data
+        shell: bash
+        run: |
+          if git diff --quiet -- data/notices.js; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/notices.js
+          git commit -m 'Refresh subscription notices [skip ci]'
+          git push
