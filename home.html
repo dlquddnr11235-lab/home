@@ -20,11 +20,11 @@
 <p class="key-help">공고 데이터가 자동으로 표시됩니다. 개인 조건은 브라우저에 저장하지 않습니다.</p>
 <button class="primary" id="searchButton" type="submit">조건에 맞춰 다시 보기</button></form>
 <section class="panel results" aria-labelledby="resultsTitle"><div class="results-head"><h2 id="resultsTitle">청약 공고</h2><p id="summary">조건을 입력하고 공고를 조회해 주세요.</p></div><div class="status" id="status" role="status">APT와 무순위·잔여세대 공고에서 접수 중이거나 접수 예정인 공고를 찾습니다. 추천은 자격 확정 결과가 아닙니다.</div><div class="filters" aria-label="접수 상태 필터"><button type="button" data-filter="all" aria-pressed="true">전체</button><button type="button" data-filter="open" aria-pressed="false">접수 중</button><button type="button" data-filter="soon" aria-pressed="false">접수 예정</button></div><div class="list" id="noticeList"></div></section>
-</div><p class="footnote">자료: <a href="https://www.data.go.kr/data/15098547/openapi.do" target="_blank" rel="noopener noreferrer">한국부동산원 청약홈 분양정보 조회 서비스</a> · 공고 데이터는 약 15분 간격으로 갱신되며 지연될 수 있습니다. 접수 일정은 바뀔 수 있습니다. 신청 전 모집공고문에서 거주 요건, 세대·주택 소유, 통장 가입 기간·예치금, 소득·자산, 재당첨 제한과 접수 시간을 확인하세요. 실제 신청은 청약홈에서 진행합니다.</p></main>
+</div><p class="footnote">자료: <a href="https://www.data.go.kr/data/15098547/openapi.do" target="_blank" rel="noopener noreferrer">한국부동산원 청약홈 분양정보 조회 서비스</a> · Vercel에서는 서버 API로 조회하며, 다른 환경에서는 약 15분 간격으로 수집한 데이터를 표시합니다. 접수 일정은 바뀔 수 있습니다. 신청 전 모집공고문에서 거주 요건, 세대·주택 소유, 통장 가입 기간·예치금, 소득·자산, 재당첨 제한과 접수 시간을 확인하세요. 실제 신청은 청약홈에서 진행합니다.</p></main>
 <script src="data/notices.js"></script>
 <script>
 'use strict';
-const SNAPSHOT=window.CHEONGYAK_NOTICE_DATA||null;
+let snapshot=window.CHEONGYAK_NOTICE_DATA||null;
 const form=document.getElementById('profileForm'),list=document.getElementById('noticeList'),statusBox=document.getElementById('status'),summary=document.getElementById('summary'),filterButtons=[...document.querySelectorAll('[data-filter]')];
 const value=id=>document.getElementById(id).value;
 let results=[],activeFilter='all',lastProfile=null;
@@ -48,13 +48,13 @@ function safeNoticeUrl(raw){try{const url=new URL(String(raw||''));if(url.protoc
 function render(){list.replaceChildren();const shown=results.filter(record=>activeFilter==='all'||record.state===activeFilter);if(!shown.length){const empty=document.createElement('p');empty.className='empty';empty.textContent=results.length?'선택한 접수 상태의 공고가 없습니다.':'조회 범위에 현재 접수 중이거나 예정된 공고가 없습니다.';list.appendChild(empty);return}for(const record of shown){const item=record.item,card=document.createElement('article');card.className='notice';const top=document.createElement('div');top.className='notice-top';const title=document.createElement('h3');title.textContent=item.HOUSE_NM||'이름 없는 공고';const tag=document.createElement('span');tag.className='tag'+(record.state==='soon'?' soon':'');tag.textContent=record.state==='soon'?'접수 예정':'접수 중';top.append(title,tag);const meta=document.createElement('p');meta.className='meta';meta.textContent=`${record.type} · ${item.SUBSCRPT_AREA_CODE_NM||'지역 미표기'} · 접수 ${showDate(record.period.start)} ~ ${showDate(record.period.end)}`;const address=document.createElement('p');address.className='meta';address.textContent=item.HSSPLY_ADRES||'상세 위치는 공고문 확인';const reason=document.createElement('p');reason.className='reason';reason.textContent='우선 확인 이유: '+assessment(record,lastProfile).text;const link=document.createElement('a');link.href=safeNoticeUrl(item.PBLANC_URL);link.target='_blank';link.rel='noopener noreferrer';link.textContent='공고 확인 및 청약홈에서 신청 ↗';card.append(top,meta,address,reason,link);list.appendChild(card)}}
 function search(){
   lastProfile={region:value('region'),age:value('age'),house:value('house'),account:value('account'),married:value('married'),children:value('children')};
-  if(!SNAPSHOT||!Array.isArray(SNAPSHOT.items)){
+  if(!snapshot||!Array.isArray(snapshot.items)){
     results=[];list.replaceChildren();summary.textContent='공고 데이터를 불러오지 못했습니다.';
     setStatus('자동 수집 데이터가 아직 준비되지 않았습니다. 잠시 후 다시 열어 주세요.',true);
     return;
   }
   const today=koreaDate(),unique=new Map();
-  for(const record of SNAPSHOT.items){
+  for(const record of snapshot.items){
     if(!record||!record.item)continue;
     const item=record.item,identity=[record.type,item.HOUSE_MANAGE_NO,item.PBLANC_NO,item.HOUSE_NM].join(':');
     unique.set(identity,record);
@@ -67,11 +67,29 @@ function search(){
     return record.period.start&&record.period.end>=today&&(lastProfile.region==='all'||area.includes(lastProfile.region));
   }).sort((a,b)=>assessment(b,lastProfile).score-assessment(a,lastProfile).score||a.period.start.localeCompare(b.period.start));
   render();
-  const collected=new Date(SNAPSHOT.updatedAt),stamp=Number.isNaN(collected.getTime())?'시간 미확인':new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',dateStyle:'medium',timeStyle:'short'}).format(collected);
-  summary.textContent=`수집 ${stamp} · ${results.length}건 · 접수 중 ${results.filter(r=>r.state==='open').length}건`;
+  const collected=new Date(snapshot.updatedAt),stamp=Number.isNaN(collected.getTime())?'시간 미확인':new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',dateStyle:'medium',timeStyle:'short'}).format(collected);
+  summary.textContent=`${snapshot.source==='vercel'?'서버 조회':'수집'} ${stamp} · ${results.length}건 · 접수 중 ${results.filter(r=>r.state==='open').length}건`;
   const stale=Number.isNaN(collected.getTime())||Date.now()-collected.getTime()>45*60000;
-  setStatus((stale?'최근 데이터 갱신이 지연되고 있습니다. ':'약 15분 간격으로 수집한 공고입니다. ')+'추천 이유는 참고용이며 실제 신청 자격과 접수 시간은 공고문에서 확인하세요.',stale);
-}form.addEventListener('submit',event=>{event.preventDefault();search()});for(const button of filterButtons)button.addEventListener('click',()=>{activeFilter=button.dataset.filter;for(const other of filterButtons)other.setAttribute('aria-pressed',String(other===button));if(lastProfile)render()});search();
+  const sourceMessage=snapshot.source==='vercel'?'Vercel 서버에서 청약 API를 조회했습니다. ':stale?'최근 데이터 갱신이 지연되고 있습니다. ':'약 15분 간격으로 수집한 공고입니다. ';
+  setStatus(sourceMessage+(snapshot.partial?'일부 유형은 조회하지 못했을 수 있습니다. ':'')+'추천 이유는 참고용이며 실제 신청 자격과 접수 시간은 공고문에서 확인하세요.',snapshot.source!=='vercel'&&stale);
+}
+async function updateFromVercel(){
+  if(!/^https?:$/.test(location.protocol))return;
+  try{
+    const response=await fetch('/api/notices',{cache:'no-store',signal:AbortSignal.timeout(20000)});
+    if(!response.ok){
+      if(response.status!==404)setStatus('Vercel 실시간 조회에 실패해 저장된 공고를 표시하고 있습니다. 서버 환경변수 home과 배포 상태를 확인하세요.',true);
+      return;
+    }
+    const data=await response.json();
+    if(!Array.isArray(data.items))return;
+    snapshot=data;
+    search();
+  }catch(_){/* The published snapshot remains available. */}
+}
+form.addEventListener('submit',event=>{event.preventDefault();search()});
+for(const button of filterButtons)button.addEventListener('click',()=>{activeFilter=button.dataset.filter;for(const other of filterButtons)other.setAttribute('aria-pressed',String(other===button));if(lastProfile)render()});
+search();updateFromVercel();
 </script>
 </body>
 </html>
