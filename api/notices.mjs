@@ -21,9 +21,9 @@ async function loadPage(endpoint, key, fromDate, page) {
   url.searchParams.set('returnType', 'JSON');
   url.searchParams.set('cond[RCRIT_PBLANC_DE::GTE]', fromDate);
   const response = await fetch(url, { signal: AbortSignal.timeout(12000) });
-  if (!response.ok) throw new Error('Upstream API failed');
+  if (!response.ok) throw new Error(`upstream_status_${response.status}`);
   const body = await response.json();
-  if (!Array.isArray(body.data)) throw new Error('Unexpected upstream response');
+  if (!Array.isArray(body.data)) throw new Error('upstream_payload');
   return body.data;
 }
 
@@ -53,7 +53,14 @@ export default {
         ENDPOINTS.map(endpoint => loadEndpoint(endpoint, key, koreaDate(90)))
       );
       const good = batches.filter(batch => batch.status === 'fulfilled').map(batch => batch.value);
-      if (!good.length) throw new Error('All upstream APIs failed');
+      if (!good.length) {
+        const causes = batches.map(batch => {
+          const error = batch.reason;
+          if (typeof error?.message === 'string' && /^upstream_(status_\d+|payload)$/.test(error.message)) return error.message;
+          return error?.name === 'TimeoutError' ? 'timeout' : 'network_error';
+        });
+        return Response.json({ error: 'Could not load notices', causes }, { status: 502 });
+      }
       return Response.json({
         source: 'vercel',
         updatedAt: new Date().toISOString(),
