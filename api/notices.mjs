@@ -44,7 +44,7 @@ export default {
     if (request.method !== 'GET') {
       return Response.json({ error: 'Method not allowed' }, { status: 405, headers: { Allow: 'GET' } });
     }
-    const key = process.env.home;
+    const key = process.env.home?.trim().replace(/^['"]|['"]$/g, '');
     if (!key) {
       return Response.json({ error: 'API key is not configured' }, { status: 503 });
     }
@@ -59,7 +59,11 @@ export default {
           if (typeof error?.message === 'string' && /^upstream_(status_\d+|payload)$/.test(error.message)) return error.message;
           return error?.name === 'TimeoutError' ? 'timeout' : 'network_error';
         });
-        return Response.json({ error: 'Could not load notices', causes }, { status: 502 });
+        return Response.json({
+          error: 'Could not load notices', causes,
+          keyLength: key.length,
+          keyShape: /^[a-f0-9]{64}$/i.test(key)
+        }, { status: 502 });
       }
       return Response.json({
         source: 'vercel',
