@@ -53,18 +53,7 @@ export default {
         ENDPOINTS.map(endpoint => loadEndpoint(endpoint, key, koreaDate(90)))
       );
       const good = batches.filter(batch => batch.status === 'fulfilled').map(batch => batch.value);
-      if (!good.length) {
-        const causes = batches.map(batch => {
-          const error = batch.reason;
-          if (typeof error?.message === 'string' && /^upstream_(status_\d+|payload)$/.test(error.message)) return error.message;
-          return error?.name === 'TimeoutError' ? 'timeout' : 'network_error';
-        });
-        return Response.json({
-          error: 'Could not load notices', causes,
-          keyLength: key.length,
-          keyShape: /^[a-f0-9]{64}$/i.test(key)
-        }, { status: 502 });
-      }
+      if (!good.length) throw new Error('All upstream APIs failed');
       return Response.json({
         source: 'vercel',
         updatedAt: new Date().toISOString(),
